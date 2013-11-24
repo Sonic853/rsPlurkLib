@@ -103,6 +103,20 @@ namespace RenRen.Plurk
 
         #endregion
 
+        #region "Users/"
+        /// Implement of Plurk API-Users/
+        /// Added by neodebut(TW) on 2013.08.26
+
+        public Entities.User GetCurrUserInfo()
+        {
+            NameValueCollection nvc = new NameValueCollection();
+
+            string req = instance.SendRequest("Users/currUser", nvc);
+            return CreateEntity<Entities.User>(req);
+        }
+
+        #endregion
+
         #region "Responses/"
 
         public void AddResponse(long plurk_id, string qualifier, string message)
