@@ -6,6 +6,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Collections.Specialized;
 using Newtonsoft.Json;
+using System.Web;
 
 namespace RenRen.Plurk
 {
@@ -23,10 +24,11 @@ namespace RenRen.Plurk
         #region "Constant Fields"
         private static string cAppKey = "";         // Fill the application key you acquired
         private static string cAppSecret = "";      // Fill the application secret also
-        private static string cReqTokenUrl = "http://www.plurk.com/OAuth/request_token";
-        private static string cGrantUrl = "http://www.plurk.com/OAuth/authorize";
-        private static string cExchangeUrl = "http://www.plurk.com/OAuth/access_token";
-        private static string cApiBaseUrl = "http://www.plurk.com/APP/";
+        private static string cReqTokenUrl = "https://www.plurk.com/OAuth/request_token";
+        private static string cGrantUrl = "https://www.plurk.com/OAuth/authorize";
+        private static string cExchangeUrl = "https://www.plurk.com/OAuth/access_token";
+        private static string cApiBaseUrl = "https://www.plurk.com/APP/";
+        private static string cproxyUrl = "";
         private static string cUnreservedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.~";
         private static DateTime cTimestampBase = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         #endregion
@@ -34,6 +36,17 @@ namespace RenRen.Plurk
         #region "Constructor"
         public OAuthInstance()
         {
+        }
+        public OAuthInstance(string appKey, string appSecret)
+        {
+            cAppKey = appKey;
+            cAppSecret = appSecret;
+        }
+        public OAuthInstance(string appKey, string appSecret, string proxyUrl)
+        {
+            cAppKey = appKey;
+            cAppSecret = appSecret;
+            cproxyUrl = proxyUrl;
         }
         #endregion
 
@@ -46,7 +59,7 @@ namespace RenRen.Plurk
         {
             NameValueCollection param = new NameValueCollection()
                 { { "oauth_callback", "oob"} }; // Plurk seems to omit this parameter
-            
+
             try
             {
                 HttpWebRequest request = CreateRequest(cReqTokenUrl, param);
@@ -95,7 +108,7 @@ namespace RenRen.Plurk
             EnsureTokenState();
             NameValueCollection param = new NameValueCollection()
                 { { "oauth_token", token.Content}, {"oauth_verifier", verifier} };
-            
+
             try
             {
                 HttpWebRequest request = CreateRequest(cExchangeUrl, param);
@@ -128,7 +141,8 @@ namespace RenRen.Plurk
         /// <exception cref="UnauthorizedAccessException">Occurs when the token has expired 
         /// or the verifier specified is not valid.</exception>
         /// <exception cref="WebException">Connection problems occured.</exception>
-        public string SendRequest(string apiPath, NameValueCollection args)
+        public string SendRequest(string apiPath, NameValueCollection args) => SendRequest(apiPath, args, "POST");
+        public string SendRequest(string apiPath, NameValueCollection args, string method)
         {
             EnsureTokenState();
             NameValueCollection param = new NameValueCollection() { { "oauth_token", token.Content } };
@@ -139,7 +153,8 @@ namespace RenRen.Plurk
 
             try
             {
-                HttpWebRequest request = CreateRequest(cApiBaseUrl + apiPath, param);
+                HttpWebRequest request = CreateRequest(cApiBaseUrl + apiPath, param, method);
+                if (!string.IsNullOrEmpty(cproxyUrl)) request.Proxy = new WebProxy(cproxyUrl);
                 HttpWebResponse response = (HttpWebResponse)request.GetResponse();
                 using (StreamReader sr = new StreamReader(response.GetResponseStream()))
                     return sr.ReadToEnd();
@@ -181,11 +196,9 @@ namespace RenRen.Plurk
         /// <param name="uri">The request target URI.</param>
         /// <param name="param">The OAuth parameters to use.</param>
         /// <returns>The created HttpWebRequest.</returns>
-        private HttpWebRequest CreateRequest(string uri, NameValueCollection param)
+        private HttpWebRequest CreateRequest(string uri, NameValueCollection param) => CreateRequest(uri, param, "POST");
+        private HttpWebRequest CreateRequest(string uri, NameValueCollection param, string method)
         {
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
-            request.Method = "POST";
-            request.ContentType = "application/x-www-form-urlencoded";
 
             // Generate boilerplate parameters
             param.Add("oauth_consumer_key", cAppKey);
@@ -195,7 +208,7 @@ namespace RenRen.Plurk
 
             // Create signature
             param.Add("oauth_signature_method", "HMAC-SHA1");
-            string sig = GetSignature(request.Method, uri, param);
+            string sig = GetSignature(method, uri, param);
             param.Add("oauth_signature", sig);
 
             // Build up header
@@ -205,21 +218,42 @@ namespace RenRen.Plurk
                 if (key.StartsWith("oauth_")) // Possible additional parameters
                     sb.Append(", ").Append(key).Append("=\"").Append(UrlEncode(param[key])).Append("\"");
 
+            if (method == "GET")
+            {
+                if (param.Count > 0)
+                {
+                    string prefix = "?";
+                    foreach (string key in param.AllKeys)
+                    {
+                        uri += prefix + key + "=" + UrlEncode(param[key]);
+                        prefix = "&";
+                    }
+                }
+            }
+
+            var request = (HttpWebRequest)WebRequest.Create(uri);
+            request.Method = method;
+            request.ContentType = "application/x-www-form-urlencoded";
+
             request.Headers.Add("Authorization", sb.ToString());
 
             // Build up POST body
-            StreamWriter sw = new StreamWriter(request.GetRequestStream(), Encoding.ASCII);
-            sb = new StringBuilder();
-            string prefix = "";
-            foreach (string key in param.AllKeys)
-                if (!key.StartsWith("oauth_")) {
-                    sb.Append(prefix).Append(key).Append("=").Append(UrlEncode(param[key]));
-                    prefix = "&";
-                }
+            if (request.Method == "POST")
+            {
+                StreamWriter sw = new StreamWriter(request.GetRequestStream(), Encoding.ASCII);
+                sb = new StringBuilder();
+                string prefix = "";
+                foreach (string key in param.AllKeys)
+                    if (!key.StartsWith("oauth_"))
+                    {
+                        sb.Append(prefix).Append(key).Append("=").Append(UrlEncode(param[key]));
+                        prefix = "&";
+                    }
 
-            sw.Write(sb.ToString());
-            sw.Flush();
-            sw.Close();
+                sw.Write(sb.ToString());
+                sw.Flush();
+                sw.Close();
+            }
             return request;
         }
 
@@ -252,7 +286,7 @@ namespace RenRen.Plurk
 
             HMACSHA1 hashProvider = new HMACSHA1(Encoding.UTF8.GetBytes(key), true);
             byte[] result = hashProvider.ComputeHash(Encoding.UTF8.GetBytes(source));
-            
+
             return Convert.ToBase64String(result);
         }
 
@@ -318,7 +352,8 @@ namespace RenRen.Plurk
         public IOAuthToken Token
         {
             get { return token; }
-            set {
+            set
+            {
                 OAuthToken toSet = value as OAuthToken;
                 if (value == null) throw new ArgumentException();
                 token = toSet;

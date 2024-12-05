@@ -18,6 +18,14 @@ namespace RenRen.Plurk
             // You can assign your token here if you aren't making an interactive client
             // e.g. instance.Token = new OAuthToken(content, secret, OAuthTokenType.Permanent);
         }
+        public PlurkHelper(string appKey, string appSecret)
+        {
+            instance = new OAuthInstance(appKey, appSecret);
+        }
+        public PlurkHelper(string appKey, string appSecret, string proxyUrl)
+        {
+            instance = new OAuthInstance(appKey, appSecret, proxyUrl);
+        }
         #endregion
 
         #region "Private Fields"
@@ -54,7 +62,7 @@ namespace RenRen.Plurk
             return CreateEntity<Entities.GetPlurksResponse>(req);
         }
 
-        public Entities.GetPlurksResponse GetPublicPlurks(int userId, DateTime offset, 
+        public Entities.GetPlurksResponse GetPublicPlurks(int userId, DateTime offset,
                                                     PlurkType type = PlurkType.All, int limit = 20)
         {
             NameValueCollection nvc = new NameValueCollection();
@@ -63,7 +71,8 @@ namespace RenRen.Plurk
             if (offset <= DateTime.Now)
                 nvc.Add("offset", offset.ToString("yyyy-MM-ddTHH:mm:ss"));
 
-            switch (type) {
+            switch (type)
+            {
                 case PlurkType.MyPlurks:
                     nvc.Add("filter", "only_user"); break;
                 case PlurkType.RespondedPlurks:
@@ -94,7 +103,7 @@ namespace RenRen.Plurk
             StringBuilder sb = new StringBuilder();
             string prefix = "[";
             foreach (long id in plurk_ids)
-                { sb.Append(prefix).Append(id); prefix = ","; }
+            { sb.Append(prefix).Append(id); prefix = ","; }
             sb.Append("]");
             nvc.Add("ids", sb.ToString());
 
@@ -109,12 +118,24 @@ namespace RenRen.Plurk
 
         public Entities.User GetCurrUserInfo()
         {
-            NameValueCollection nvc = new NameValueCollection();
+            var nvc = new NameValueCollection();
 
-            string req = instance.SendRequest("Users/currUser", nvc);
+            var req = instance.SendRequest("Users/me", nvc, "GET");
             return CreateEntity<Entities.User>(req);
         }
 
+        #endregion
+
+        #region "Profile/"
+
+        public Entities.Profile GetProfile(string user_name)
+        {
+            var nvc = new NameValueCollection();
+            nvc.Add("user_id", user_name);
+
+            var req = instance.SendRequest("Profile/getPublicProfile", nvc);
+            return CreateEntity<Entities.Profile>(req);
+        }
         #endregion
 
         #region "Responses/"
@@ -154,7 +175,7 @@ namespace RenRen.Plurk
                     nvc.Add("offset", offset.ToString());
 
                 string req = instance.SendRequest("FriendsFans/getFriendsByOffset", nvc);
-                Entities.User[] users = new Entities.User[] {};
+                Entities.User[] users = [];
 
                 users = CreateEntity<Entities.User[]>(req);
                 offset += users.Length;
@@ -180,8 +201,7 @@ namespace RenRen.Plurk
             {
                 try
                 {
-                    Entities.ErrorResponse err =
-                             JsonConvert.DeserializeObject<Entities.ErrorResponse>(ex.ResponseData);
+                    var err = JsonConvert.DeserializeObject<Entities.ErrorResponse>(ex.ResponseData)!;
                     if (err.error_text == "Plurk not found")
                         throw new PlurkNotFoundException();
                     else if (err.error_text == "No permissions")
@@ -192,7 +212,8 @@ namespace RenRen.Plurk
                         throw new PlurkException(
                             String.Format("Plurk rejected the request due to {0}.", err.error_text));
                 }
-                catch (JsonSerializationException) {} throw;
+                catch (JsonSerializationException) { }
+                throw;
             }
         }
 

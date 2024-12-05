@@ -33,17 +33,20 @@ namespace RenRen.Plurk
             int l = (s != null) ? s.Length : 0;
             int i = 0;
 
-            while (i < l) {
+            while (i < l)
+            {
                 int si = i;     // Next '&'
                 int ti = -1;    // Next '='
 
                 while (i < l)
                 {
                     char cur = s[i];
-                    if (cur == '=') {
+                    if (cur == '=')
+                    {
                         if (ti < 0)
                             ti = i;
-                    } else
+                    }
+                    else
                         if (cur == '&') break;
 
                     i++;
@@ -51,14 +54,17 @@ namespace RenRen.Plurk
 
                 string name = null, value = null;
 
-                if (ti >= 0) {
+                if (ti >= 0)
+                {
                     name = s.Substring(si, ti - si);
                     value = s.Substring(ti + 1, i - ti - 1);
-                } else {
+                }
+                else
+                {
                     value = s.Substring(si, i - si);
                 }
 
-                if (urlencoded) 
+                if (urlencoded)
                     result.Add(UrlDecode(name, encoding), UrlDecode(value, encoding));
                 else
                     result.Add(name, value);
@@ -95,29 +101,35 @@ namespace RenRen.Plurk
             int count = s.Length;
             UrlDecoder buffer = new UrlDecoder(count, encoding);
 
-            for (int pos = 0; pos < count; pos++) {
+            for (int pos = 0; pos < count; pos++)
+            {
                 char ch = s[pos];
 
                 if (ch == '+') ch = ' ';
                 else
-                    if ((ch == '%') && (pos < count - 2)) {
-                        if ((s[pos + 1] == 'u') && pos < (count - 5)) { // %uXXXX
-                            int h1 = HexToInt(s[pos + 2]);
-                            int h2 = HexToInt(s[pos + 3]);
-                            int h3 = HexToInt(s[pos + 4]);
-                            int h4 = HexToInt(s[pos + 5]);
+                    if ((ch == '%') && (pos < count - 2))
+                {
+                    if ((s[pos + 1] == 'u') && pos < (count - 5))
+                    { // %uXXXX
+                        int h1 = HexToInt(s[pos + 2]);
+                        int h2 = HexToInt(s[pos + 3]);
+                        int h3 = HexToInt(s[pos + 4]);
+                        int h4 = HexToInt(s[pos + 5]);
 
-                            if (h1 >= 0 && h2 >= 0 && h3 >= 0 && h4 >= 0) {
-                                ch = (char)((h1 << 12) | (h2 << 8) | (h3 << 4) | h4);
-                                pos += 5;
-                                buffer.AddChar(ch); continue;
+                        if (h1 >= 0 && h2 >= 0 && h3 >= 0 && h4 >= 0)
+                        {
+                            ch = (char)((h1 << 12) | (h2 << 8) | (h3 << 4) | h4);
+                            pos += 5;
+                            buffer.AddChar(ch); continue;
                         }
                     }
-                    else {  // %XX
+                    else
+                    {  // %XX
                         int h1 = HexToInt(s[pos + 1]);
                         int h2 = HexToInt(s[pos + 2]);
 
-                        if (h1 >= 0 && h2 >= 0) {
+                        if (h1 >= 0 && h2 >= 0)
+                        {
                             byte b = (byte)((h1 << 4) | h2);
                             pos += 2;
                             buffer.AddByte(b); continue;
@@ -192,7 +204,8 @@ namespace RenRen.Plurk
 
             private void FlushBytes()
             {
-                if (_byteCount > 0) {
+                if (_byteCount > 0)
+                {
                     _charCount += _encoding.GetChars(_byteBuffer, 0, _byteCount, _charBuffer, _charCount);
                     _byteCount = 0;
                 }
