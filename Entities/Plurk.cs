@@ -16,7 +16,7 @@ public class PlurkBase
     [JsonProperty("user_id")]
     public long UserId { get; set; } = -1;
     [JsonProperty("posted")]
-    public DateTime Posted { get; set; }
+    public DateTime? Posted { get; set; }
     [JsonProperty("plurk_id")]
     public long PlurkId { get; set; } = -1;
     [JsonProperty("qualifier")]
@@ -59,7 +59,7 @@ public class Plurk : PlurkBase
     [JsonProperty("replurked")]
     public bool Replurked { get; set; } = false;
     [JsonProperty("replurker_id")]
-    public long ReplurkerId { get; set; } = -1;
+    public long? ReplurkerId { get; set; } = -1;
     [JsonProperty("replurkers_count")]
     public int ReplurkersCount { get; set; } = -1;
     [JsonProperty("replurkers")]

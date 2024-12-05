@@ -13,7 +13,7 @@ public class User
     [JsonProperty("display_name")]
     public string DisplayName { get; set; } = string.Empty;
     [JsonProperty("avatar")]
-    public long Avatar { get; set; } = -1;
+    public long? Avatar { get; set; } = -1;
     [JsonProperty("premium")]
     public bool Premium { get; set; } = false;
     [JsonProperty("date_of_birth")]
@@ -56,7 +56,7 @@ public class User
     public bool EmailConfirmed { get; set; } = false;
     // phone_verified
     [JsonProperty("pinned_plurk_id")]
-    public int PinnedPlurkID { get; set; } = -1;
+    public long? PinnedPlurkID { get; set; } = -1;
     [JsonProperty("background_id")]
     public int BackgroundID { get; set; } = -1;
     [JsonProperty("recruited")]
@@ -103,9 +103,9 @@ public class User
 public class UserBirthday
 {
     [JsonProperty("year")]
-    public int Year { get; set; } = -1;
+    public int? Year { get; set; } = -1;
     [JsonProperty("month")]
-    public int Month { get; set; } = -1;
+    public int? Month { get; set; } = -1;
     [JsonProperty("day")]
-    public int Day { get; set; } = -1;
+    public int? Day { get; set; } = -1;
 }

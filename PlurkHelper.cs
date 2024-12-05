@@ -62,12 +62,27 @@ namespace RenRen.Plurk
             return CreateEntity<Entities.GetPlurksResponse>(req);
         }
 
-        public Entities.GetPlurksResponse GetPublicPlurks(int userId, DateTime offset,
-                                                    PlurkType type = PlurkType.All, int limit = 20)
+        public Entities.GetPlurksResponse GetPublicPlurks(long userId, DateTime offset, int limit = 20)
         {
-            NameValueCollection nvc = new NameValueCollection();
-            nvc.Add("user_id", userId.ToString());
-            nvc.Add("limit", limit.ToString());
+            NameValueCollection nvc = new()
+            {
+                { "user_id", userId.ToString() },
+                { "limit", limit.ToString() }
+            };
+            if (offset <= DateTime.Now)
+                nvc.Add("offset", offset.ToString("yyyy-MM-ddTHH:mm:ss"));
+
+            string req = instance.SendRequest("Timeline/getPublicPlurks", nvc);
+            return CreateEntity<Entities.GetPlurksResponse>(req);
+        }
+
+        public Entities.GetPlurksResponse GetPlurks(long userId, DateTime offset, PlurkType type = PlurkType.All, int limit = 20)
+        {
+            NameValueCollection nvc = new()
+            {
+                { "user_id", userId.ToString() },
+                { "limit", limit.ToString() }
+            };
             if (offset <= DateTime.Now)
                 nvc.Add("offset", offset.ToString("yyyy-MM-ddTHH:mm:ss"));
 
@@ -83,7 +98,7 @@ namespace RenRen.Plurk
                     nvc.Add("filter", "only_favorite"); break;
             }
 
-            string req = instance.SendRequest("Timeline/getPublicPlurks", nvc);
+            string req = instance.SendRequest("Timeline/getPlurks", nvc);
             return CreateEntity<Entities.GetPlurksResponse>(req);
         }
 
@@ -163,7 +178,7 @@ namespace RenRen.Plurk
 
         #region "FriendsFans/"
 
-        public IEnumerator<Entities.User> EnumerateFriends(int userId)
+        public IEnumerator<Entities.User> EnumerateFriends(long userId)
         {
             int offset = 0;
             do
@@ -202,15 +217,15 @@ namespace RenRen.Plurk
                 try
                 {
                     var err = JsonConvert.DeserializeObject<Entities.ErrorResponse>(ex.ResponseData)!;
-                    if (err.error_text == "Plurk not found")
+                    if (err.ErrorText == "Plurk not found")
                         throw new PlurkNotFoundException();
-                    else if (err.error_text == "No permissions")
+                    else if (err.ErrorText == "No permissions")
                         throw new PlurkPermissionException();
-                    else if (err.error_text.StartsWith("anti-flood-"))
+                    else if (err.ErrorText.StartsWith("anti-flood-"))
                         throw new PlurkFloodException();
                     else
                         throw new PlurkException(
-                            String.Format("Plurk rejected the request due to {0}.", err.error_text));
+                            string.Format("Plurk rejected the request due to {0}.", err.ErrorText));
                 }
                 catch (JsonSerializationException) { }
                 throw;

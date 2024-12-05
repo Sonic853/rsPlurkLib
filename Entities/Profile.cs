@@ -21,7 +21,7 @@ public class Profile
     [JsonProperty("has_read_permission")]
     public bool HasReadPermission { get; set; } = false;
     [JsonProperty("plurks")]
-    public List<Plurk> Plurks { get; set; } = new();
+    public Plurk[] Plurks { get; set; } = [];
     [JsonProperty("user_info")]
     public User UserInfo { get; set; } = new();
     [JsonProperty("friends_count")]
